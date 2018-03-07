@@ -79,8 +79,12 @@ void* my_alloc(int size) {
 			// \/create split below \/
 			myBlock = overheadSize + mutate;
 			//^^create split above^^
-			(*myBlock).next_block = free_head;
-			free_head = myBlock;
+			//myBlock is now the newly made open spaced block
+			//now have the newly made open space point to 
+			// the next open-block in the list (or NULL)
+			(*myBlock).next_block = (*prevBlock).next_block;
+			//finally have prevBlock point to the newly opened block
+			(*prevBlock).next_block = myBlock;
 		}
 	}//if yes but cannot split block
 	else {
