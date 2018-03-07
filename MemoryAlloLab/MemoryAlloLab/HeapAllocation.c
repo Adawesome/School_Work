@@ -92,11 +92,13 @@ void* my_alloc(int size) {
 		}
 		else {
 			//will require pointer changing unlike above if
-
+			(*prevBlock).next_block = (*myBlock).next_block;
+			(*myBlock).block_size = mutate;
+			//(*myBlock).next_block = NULL;
 		}
 	}
 
-
+	return myBlock;
 }
 int main() {
 	//swag 
