@@ -104,6 +104,21 @@ void* my_alloc(int size) {
 
 	return myBlock;
 }
+void my_free(void *data) {
+	// will deallocate the given Block pointer (passed via parameter)
+	//note, a pointer is being passed as a parameter... this is pass by reference... not changing
+	//a "copy" of the value but the actual value itself
+	struct Block* blockLocation = data;
+	(*blockLocation).block_size = (int)data; ///???? seek aid from professor
+	blockLocation = (int)data - overheadSize;
+	//above:^^ transform data to become a Block & shift it to account for overhead
+	//void* trueStart = blockLocation - voidSize;
+	//above:^^ possibly needs to be "__ - overheadSize" instead of voidSize?!? <<TEST>> <<IGNORE FOR NOW>>
+	//this new variable, blockLocation can now become the location for open block to be pointed to...
+	blockLocation = free_head;
+	free_head = blockLocation;
+
+}
 int main() {
 	//swag 
 }
