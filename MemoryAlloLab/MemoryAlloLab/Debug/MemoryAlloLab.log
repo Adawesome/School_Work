@@ -1,0 +1,5 @@
+﻿  HeapAllocation.c
+c:\users\adam-entertainment\documents\github\school_work\memoryallolab\memoryallolab\heapallocation.c(149): warning C4013: 'printPointer' undefined; assuming extern returning int
+c:\users\adam-entertainment\documents\github\school_work\memoryallolab\memoryallolab\heapallocation.c(178): warning C4101: 'temp': unreferenced local variable
+  MemoryAlloLab.vcxproj -> C:\Users\Adam-Entertainment\Documents\GitHub\School_Work\MemoryAlloLab\Debug\MemoryAlloLab.exe
+  MemoryAlloLab.vcxproj -> C:\Users\Adam-Entertainment\Documents\GitHub\School_Work\MemoryAlloLab\Debug\MemoryAlloLab.pdb (Full PDB)

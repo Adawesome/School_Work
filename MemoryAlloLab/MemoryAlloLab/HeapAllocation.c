@@ -11,7 +11,9 @@ void my_initialize_heap(int size) {
 	//4 bytes for pointer, 4 bytes for size
 	//size - 8.
 	free_head = malloc(size);
-	(*free_head).block_size = size - overheadSize;
+	printf("fresh malloc free_head at: %p\n", (void *)&free_head);
+	//(*free_head).block_size = size - overheadSize; <<< this created a "ghost" overhead of 8bytes
+	(*free_head).block_size = size;
 	(*free_head).next_block = NULL;
 }
 void* my_alloc(int size) {
@@ -24,13 +26,17 @@ void* my_alloc(int size) {
 	//int mutate = size + (size % voidSize);
 	int mutate;
 	// probably don't need this if/else statement
-	if (multiple != 0) {
-		mutate += size + multiple;
+	mutate = size;
+	while (multiple != 0) {
+		mutate++;
+		multiple = mutate % voidSize;
 	}
-	else
-		mutate = size;
+	if (myBlock == NULL) {
+		// can't do anything, return to end my_alloc
+		return 0;
+	}
 	//start "singly linked list" traversal
-	while(!(*myBlock).block_size >= mutate){
+	while((*myBlock).block_size < (mutate + overheadSize)){
 		//this means that myBlocks size does not have enough room to
 		//fit the desired allocation size (parameter size)
 		if(myBlock == NULL) {
@@ -45,39 +51,38 @@ void* my_alloc(int size) {
 		}
 		
 	}
-	for (int i = 0; i < countToPrevious; i++) {
+	for (int i = 1; i < countToPrevious; i++) {
 		//move prevBlock to be the previous Block that would point to myBlock.
 		prevBlock = (*prevBlock).next_block;
 	}
-	//quick test to check prev Block/////////
-	if((*prevBlock).next_block == myBlock)
-		printf("We Gucci...\n");
-	//////////////////end test/////////////
-
 	//leaving this loop means the block size is good.
 	//if yes AND can split block
 	int checkSplit = (*myBlock).block_size - mutate;
-	if (checkSplit > (overheadSize + voidSize)) {
+	if (checkSplit >= (overheadSize + voidSize)) {
 		//above logic: if checksplit is greater than compared number 
 		//then it has remaining space to make a new block
 		//now check if myBlock is same as free head or not
 		if (myBlock == free_head)
 		{
 			//change free_head to point to the new splitted block.
-			free_head = overheadSize + mutate;
+			//
+			free_head += overheadSize + mutate;
 			//ensure free_head still points to NULL or open blocks
 			(*free_head).next_block = (*myBlock).next_block;
 			//fix block size of my block
+			(*free_head).block_size = (*myBlock).block_size - overheadSize - mutate;
 			(*myBlock).block_size = mutate;
+			
 		}
 		else {
 			//unlock above, myBlock will need to point to the newly split block to properly
 			//rearrange pointers
 			//this means that we are not same as free_head, but traversed the "list"
+			struct Block* tempBlockTest = myBlock;
+			int splitSize = (*tempBlockTest).block_size - overheadSize - mutate;
 			(*prevBlock).next_block = (*myBlock).next_block;
-			(*myBlock).block_size = mutate;
 			// \/create split below \/
-			myBlock = overheadSize + mutate;
+			myBlock += overheadSize + mutate;
 			//^^create split above^^
 			//myBlock is now the newly made open spaced block
 			//now have the newly made open space point to 
@@ -85,6 +90,8 @@ void* my_alloc(int size) {
 			(*myBlock).next_block = (*prevBlock).next_block;
 			//finally have prevBlock point to the newly opened block
 			(*prevBlock).next_block = myBlock;
+			(*myBlock).block_size = splitSize;
+			return tempBlockTest;
 		}
 	}//if yes but cannot split block
 	else {
@@ -101,7 +108,6 @@ void* my_alloc(int size) {
 			//(*myBlock).next_block = NULL;
 		}
 	}
-
 	return myBlock;
 }
 void my_free(void *data) {
@@ -109,16 +115,100 @@ void my_free(void *data) {
 	//note, a pointer is being passed as a parameter... this is pass by reference... not changing
 	//a "copy" of the value but the actual value itself
 	struct Block* blockLocation = data;
-	(*blockLocation).block_size = (int)data; ///???? seek aid from professor
-	blockLocation = (int)data - overheadSize;
-	//above:^^ transform data to become a Block & shift it to account for overhead
-	//void* trueStart = blockLocation - voidSize;
-	//above:^^ possibly needs to be "__ - overheadSize" instead of voidSize?!? <<TEST>> <<IGNORE FOR NOW>>
-	//this new variable, blockLocation can now become the location for open block to be pointed to...
-	blockLocation = free_head;
+	(*blockLocation).block_size += overheadSize;
+	//fix block size becuase we create overhead on my_alloc, so have to get rid of that overhead here
+	//otherwise we would have 2 overheads...
+	(*blockLocation).next_block = free_head;
 	free_head = blockLocation;
+	//1st : "data" points to current_free_head
+	//2nd : free_head points to "data" which is pointing to old_free_head
 
 }
+void testCase1() {
+	void* ptr = my_alloc(sizeof(int));
+	printf("CURRENT POINTER: %p\n", (void *)&ptr);
+	my_free(ptr);
+	printf("AFTER FREE: %p\n", (void *)&ptr);
+	ptr = my_alloc(16);
+	printf("SAME ALLOC: %p\n", (void *)&ptr);
+}
+void testCase2() {
+	//overheadSize == 8
+	//integer size == 4
+	//total(in hex)== 0xC
+	void* allo1 = my_alloc(sizeof(int));
+	printf("_FIRST INT POINTER: %p\n", (void *)allo1);
+	//printPointer(allo1);
+	void* allo2 = my_alloc(sizeof(int));
+	printf("SECOND INT POINTER: %p\n", (void *)allo2);
+	//printPointer(allo2);
+}
+void testCase3() {
+	int temp;
+	printf("CURRENT FREE HEAD : ");
+	temp = printPointer(free_head);
+	void* allo1 = my_alloc(sizeof(int));
+	printf("_FIRST INT POINTER: ");
+	temp = printPointer(allo1);
+	void* allo2 = my_alloc(sizeof(int));
+	printf("SECOND INT POINTER: ");
+	temp = printPointer(allo2);
+	void* allo3 = my_alloc(sizeof(int));
+	printf("_THIRD INT POINTER: ");
+	temp = printPointer(allo3);
+	my_free(allo2);
+	void* allo4 = my_alloc(sizeof(double));
+	printf("__A DOUBLE POINTER: ");
+	temp = printPointer(allo4);
+	void* sameAs2 = my_alloc(sizeof(int));
+	printf("____________________________\n");
+	printf("SECOND INT POINTER: ");
+	temp = printPointer(allo2);
+	printf("___SAME AS SECOND?: ");
+	temp = printPointer(sameAs2);
+	printf("CURRENT FREE HEAD : ");
+	temp = printPointer(free_head);
+}
+int printPointer(void *ptr) {
+	//struct Block* test = ptr;
+	printf("%p\n",(void *)ptr);
+	return 0;
+}
+void test4() {
+	int temp;
+	printf("FREE HEAD LOCATOIN: ");
+	printPointer(free_head);
+	void* charTest = my_alloc(sizeof(char));
+	printf("CHAR LOCATION     : ");
+	printPointer(charTest);
+	void* intTest = my_alloc(sizeof(int));
+	printf("INTEGER LOCATION  : ");
+	printPointer(intTest);
+	printf("FREE HEAD LOCATOIN: ");
+	printPointer(free_head);
+}
+void testCase5() {
+	int arr[100];
+	printf("FREE HEAD  LOCATION: ");
+	printPointer(free_head);
+	void* bigArray = my_alloc(sizeof(arr));
+	printf("BIG DADDY ARRAY LOC: ");
+	printPointer(bigArray);
+	void* allo1 = my_alloc(sizeof(int));
+	printf("NORMAL_____ INTEGER: ");
+	printPointer(allo1);
+	my_free(bigArray);
+	printf("POST ARRAY FREEING : ");
+	printPointer(allo1);
+	printf("FREE HEAD  LOCATION: ");
+	printPointer(free_head);
+}
 int main() {
-	//swag 
+	my_initialize_heap(1000);
+	//testCase1();
+	//testCase2();
+	testCase3();
+	//test4();
+	//testCase5();
+	getchar();
 }
