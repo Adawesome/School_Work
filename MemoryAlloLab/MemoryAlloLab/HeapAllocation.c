@@ -11,7 +11,7 @@ void my_initialize_heap(int size) {
 	//4 bytes for pointer, 4 bytes for size
 	//size - 8.
 	free_head = malloc(size);
-	printf("fresh malloc free_head at: %p\n", (void *)&free_head);
+	printf("fresh malloc free_head at: %p\n", (void *)free_head);
 	//(*free_head).block_size = size - overheadSize; <<< this created a "ghost" overhead of 8bytes
 	(*free_head).block_size = size;
 	(*free_head).next_block = NULL;
@@ -57,6 +57,10 @@ void* my_alloc(int size) {
 	}
 	//leaving this loop means the block size is good.
 	//if yes AND can split block
+	if (myBlock == NULL) {
+		// can't do anything, return to end my_alloc
+		return 0;
+	}
 	int checkSplit = (*myBlock).block_size - mutate;
 	if (checkSplit >= (overheadSize + voidSize)) {
 		//above logic: if checksplit is greater than compared number 
@@ -95,16 +99,17 @@ void* my_alloc(int size) {
 		}
 	}//if yes but cannot split block
 	else {
+
 		//implement allocation
 		if (myBlock == free_head) {
 			//no need to move pointers other than head
-			(*myBlock).block_size = mutate;
+			//(*myBlock).block_size = mutate;
 			free_head = (*myBlock).next_block;
 		}
 		else {
 			//will require pointer changing unlike above if
 			(*prevBlock).next_block = (*myBlock).next_block;
-			(*myBlock).block_size = mutate;
+			//(*myBlock).block_size = mutate;
 			//(*myBlock).next_block = NULL;
 		}
 	}
@@ -125,14 +130,21 @@ void my_free(void *data) {
 
 }
 void testCase1() {
+	//my_initialize_heap(1000);
+	printf("TESTCASE ONE\n");
+	printf("______________________________________\n");
 	void* ptr = my_alloc(sizeof(int));
-	printf("CURRENT POINTER: %p\n", (void *)&ptr);
+	printf("CURRENT POINTER: %p\n", (void *)ptr);
 	my_free(ptr);
-	printf("AFTER FREE: %p\n", (void *)&ptr);
-	ptr = my_alloc(16);
-	printf("SAME ALLOC: %p\n", (void *)&ptr);
+	printf("AFTER FREE: %p\n", (void *)ptr);
+	void* next = my_alloc(sizeof(int));
+	printf("SAME ALLOC: %p\n", (void *)next);
+	printf("______________________________________\n");
 }
 void testCase2() {
+	//my_initialize_heap(1000);
+	printf("TESTCASE TWO\n");
+	printf("______________________________________\n");
 	//overheadSize == 8
 	//integer size == 4
 	//total(in hex)== 0xC
@@ -142,9 +154,14 @@ void testCase2() {
 	void* allo2 = my_alloc(sizeof(int));
 	printf("SECOND INT POINTER: %p\n", (void *)allo2);
 	//printPointer(allo2);
+	printf("______________________________________\n");
 }
 void testCase3() {
+	//my_initialize_heap(1000);
 	int temp;
+
+	printf("TESTCASE THREE\n");
+	printf("______________________________________\n");
 	printf("CURRENT FREE HEAD : ");
 	temp = printPointer(free_head);
 	void* allo1 = my_alloc(sizeof(int));
@@ -168,13 +185,17 @@ void testCase3() {
 	temp = printPointer(sameAs2);
 	printf("CURRENT FREE HEAD : ");
 	temp = printPointer(free_head);
+	printf("______________________________________\n");
 }
 int printPointer(void *ptr) {
-	//struct Block* test = ptr;
+	struct Block* test = ptr;
 	printf("%p\n",(void *)ptr);
 	return 0;
 }
-void test4() {
+void testCase4() {
+	//my_initialize_heap(1000);
+	printf("TESTCASE FOUR\n");
+	printf("______________________________________\n");
 	int temp;
 	printf("FREE HEAD LOCATOIN: ");
 	printPointer(free_head);
@@ -186,12 +207,16 @@ void test4() {
 	printPointer(intTest);
 	printf("FREE HEAD LOCATOIN: ");
 	printPointer(free_head);
+	printf("______________________________________\n");
 }
 void testCase5() {
-	int arr[100];
+	//my_initialize_heap(1000);
+	//int arr[100];
+	printf("TESTCASE FIVE\n");
+	printf("______________________________________\n");
 	printf("FREE HEAD  LOCATION: ");
 	printPointer(free_head);
-	void* bigArray = my_alloc(sizeof(arr));
+	void* bigArray = my_alloc(sizeof(int)*100);
 	printf("BIG DADDY ARRAY LOC: ");
 	printPointer(bigArray);
 	void* allo1 = my_alloc(sizeof(int));
@@ -202,13 +227,14 @@ void testCase5() {
 	printPointer(allo1);
 	printf("FREE HEAD  LOCATION: ");
 	printPointer(free_head);
+	printf("______________________________________\n");
 }
 int main() {
 	my_initialize_heap(1000);
 	//testCase1();
 	//testCase2();
-	testCase3();
-	//test4();
-	//testCase5();
+	//testCase3();
+	//testCase4();
+	testCase5();
 	getchar();
 }
