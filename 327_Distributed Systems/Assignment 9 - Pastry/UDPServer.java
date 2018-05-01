@@ -1,19 +1,21 @@
 import java.net.*;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 public class UDPServer{
 	public static void main(String args[]){
-		//my GUID is 2310
+		//my GUID is 0231
 		HashMap<String, String> leafset = new HashMap<>();
 		leafset.put("0200", "18.218.247.215");
 		leafset.put("0211", "34.209.81.81");
 		leafset.put("0321", "34.210.105.66");
 		leafset.put("0322", "54.213.89.200");
 		HashMap<String, String> routingtable = new HashMap<>();
-		//0XXX 1XXX 3XXX
+		
 		routingtable.put("0231", "18.218.215.240");
 		routingtable.put("1111", "52.14.108.231");
-		routingtable.put("2133", "54.183.67.190");
+		routingtable.put("2100", "54.193.18.152");
 		routingtable.put("3111", "18.217.11.51");
 		//------------------------------------------------------------------------------//
 		
@@ -24,11 +26,11 @@ public class UDPServer{
 		//020X 021X 022X
 		routingtable.put("0200", "18.218.247.215");
 		routingtable.put("0211", "34.209.81.81");
-		routingtable.put("0220", "");
+		routingtable.put("0220", null);
 		//0230 0232 0233
-		routingtable.put("0230", "");
-		routingtable.put("0232", "");
-		routingtable.put("0233", "");
+		routingtable.put("0230", null);
+		routingtable.put("0232", null);
+		routingtable.put("0233", null);
 		DatagramSocket aSocket = null;
 		try{
 			aSocket = new DatagramSocket(32710);
@@ -37,18 +39,17 @@ public class UDPServer{
 				DatagramPacket request = new DatagramPacket(buffer, buffer.length);
 				aSocket.receive(request);
 				String messageForward = "";	//The message to forward (what we will set)
-                if(request.getLength() > 4) {
-                	messageForward = "INVALID REQUEST";
-                }
-				String messagePastry = new String(buffer, 0, 4); //the GUID of the Pastry Destination we received, D
+                
+				String messagePastry = new String(buffer, 0, request.getLength()); //the GUID of the Pastry Destination we received, D
                 String myGUID = "0231"; //A
-                String pastryGUID = Integer.toString(request.getPort());//current A?
+                messagePastry = messagePastry.trim();
+               // String pastryGUID = Integer.toString(request.getPort());//current A?
 				//my server is A, the ultimate destination is D
                 //the 7 pseudocode things here from page 440 on textbook
                 /*
-                 *	1. If (L-l < D < Ll) { // the destination is within the leaf set or is the current node.	DONE
-					2. Forward M to the element Li of the leaf set with GUID closest to D or the				DONE
-						current node A.																			DONE
+                 *	1. If (L-l < D < Ll) { // the destination is within the leaf set or is the current node.	
+					2. Forward M to the element Li of the leaf set with GUID closest to D or the				
+						current node A.																			
 					3. } else { // use the routing table to despatch M to a node with a closer GUID
 					4. Find p, the length of the longest common prefix of D and A,. and i, the (p+1)th
 						hexadecimal digit of D.
@@ -59,7 +60,9 @@ public class UDPServer{
 							}
 						}
                  */
-                
+                if(request.getLength() > 4) {
+                	messageForward = "INVALID REQUEST";
+                }
                 if(messagePastry.equals("0231")) {
                 	messageForward = "0231:18.218.215.240";
                 }
@@ -68,32 +71,119 @@ public class UDPServer{
                 	System.out.println(messageForward);
                 }
                 else {
+                	ArrayList<String> keys = new ArrayList<String>(routingtable.keySet());
                 	String pString = "";
                 	int p = 0;
-                	int start = -1; //-1 for unassigned (avoiding using null)
-                	int fin = -1;
-                	for(int charat = 0; charat < 4; charat++) {
-                		if(myGUID.charAt(charat) == messagePastry.charAt(charat) && start==-1)
-                			start = charat;
-                		else if(myGUID.charAt(charat) == messagePastry.charAt(charat) && fin==-1)
-                			fin = charat;
-                		//both can be 0 or both be -1 otherwise, fin will always be larger
-                	}
-                	//if start == 0 then we have a common prefix
-                	if(start == 0)//we have a common prefix
+                	if(messagePastry.length() > 0)
                 	{
-                		pString = messagePastry.substring(start, fin);
-                		p = fin - start;
+	                	if(messagePastry.charAt(0) == myGUID.charAt(0))
+						{
+							++p;
+							if(messagePastry.length() > 1)
+							{
+								if(messagePastry.charAt(1) == myGUID.charAt(1))
+								{
+									++p;
+									if(messagePastry.length() > 2)
+									{
+										if(messagePastry.charAt(2) == myGUID.charAt(2))
+										{
+											++p;
+										}
+									}
+								}
+							}
+							
+						}
                 	}
-                	else//no common prefix
-                	{
-                		p = 0;
-                		pString = "";
-                	}
-                	char i = messagePastry.charAt(++p);
-                	//I assume I now have p and i... so moving on...
-                	//R[p,i] equals column i, row p... i assume this means p would be keys and i would be nodes (IP addresses for us)
+                	pString = messagePastry.substring(0, p);
+                	
+                	for(int i = 1; i< keys.size(); i++) {
+                		if(messagePastry.charAt(0) == '2')
+                		{
+                			messageForward = "2100:54.193.18.152";
+                			break;
+                		}
+                    	if(p ==0) {
+                    		if(messagePastry.charAt(0) == keys.get(i).charAt(0)) {
+                    			messageForward = keys.get(i)+":"+routingtable.get(keys.get(i));
+                    			break;
+                    		}
+                    	}
+                    	else if(p == 1) 
+                    	{
+                    		if(messagePastry.length() > 1) {
+                    			if(keys.get(i).charAt(0)=='0') {
+                    				//
+										messageForward = "0231:18.218.215.240";
+										break;
+                    			}
+                    		}
+                    		else {
+                    			messageForward = myGUID+":"+"18.218.215.240";
+                    			break;
+                    		}
+                    	}
+                    	else if(p == 2)
+                    	{
+                    		if(messagePastry.length() > 2)
+							{
+								if(keys.get(i).charAt(0) == '0' && keys.get(i).charAt(1) == '2')
+								{
+									if(messagePastry.charAt(2) == '0' || messagePastry.charAt(2) == '1' || messagePastry.charAt(2) == '2' || messagePastry.charAt(2) == '3')
+									{
+										if(messagePastry.charAt(2) == keys.get(i).charAt(2))
+										{
+											messageForward = keys.get(i) + ":"+routingtable.get(keys.get(i));
+											break;
+										}	
+									}	
+									else
+									{
+										messageForward = "0231:18.218.215.240";
+										break;
+									}
+								}
+							}
+							else
+							{
+								messageForward = "0231:18.218.215.240";
+								break;
+							}
+                    	}
+                    	else if(p == 3)
+                    	{
+                    		if(messagePastry.length() > 3) // if length greater than 3
+							{
+								if(keys.get(i).charAt(0) == '0' && keys.get(i).charAt(1) == '2' && keys.get(i).charAt(2) == '3')
+								{
+									if(messagePastry.charAt(3) == '0' || messagePastry.charAt(3) == '1' || messagePastry.charAt(3) == '2' || messagePastry.charAt(3) == '3')
+									{
+										if(messagePastry.charAt(3) == keys.get(i).charAt(3))
+										{
+											messageForward = keys.get(i) + ":"+routingtable.get(keys.get(i));
+											break;
+										}	
+									}	
+									else
+									{
+										messageForward = "0231:18.218.215.240";
+										break;
+									}
+								}
+							}
+							else
+							{
+								messageForward = "0231:18.218.215.240";
+								break;
+							}
+                    	}
+                    	
+                    	
+                    }
                 }
+                
+                
                 
 				DatagramPacket reply = new DatagramPacket(messageForward.getBytes(),
 						messageForward.getBytes().length, request.getAddress(), request.getPort());
